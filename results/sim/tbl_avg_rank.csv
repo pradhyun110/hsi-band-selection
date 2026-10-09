@@ -1,0 +1,7 @@
+method,avg_rank_all,avg_rank_svm,avg_rank_K_le_30
+GA,2.42,2.22,1.87
+DE,2.81,2.83,2.7
+SA,2.96,2.56,2.7
+GWO,3.37,3.39,4.1
+PSO,4.67,5.11,4.7
+Jaya,4.78,4.89,4.93

@@ -1,0 +1,14 @@
+{
+  "n_bands_original": 200,
+  "n_bins_histogram": 256,
+  "total_entropy_bits": 1349.1475990604656,
+  "max_possible_entropy_bits": 1600.0,
+  "entropy_computation_time_s": 0.06254943699968862,
+  "recommended_strategy": "Otsu automatic threshold",
+  "recommended_threshold_bits": 6.3412,
+  "recommended_bands_retained": 164,
+  "recommended_bands_removed": 36,
+  "recommended_pct_removed": 18.0,
+  "recommended_information_retained_pct": 84.46,
+  "selected_band_indices_file": "selected_band_indices.npy"
+}
