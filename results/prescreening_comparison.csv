@@ -1,0 +1,8 @@
+Strategy,Threshold (bits),Bands retained,Bands removed,% removed,Information retained (%),Screening time (s),Reproducible,Reason
+Mean threshold,6.7457,132,68,34.0,68.81,5.8e-05,Yes,Threshold = mean(H); no free parameter.
+Median threshold,6.9427,100,100,50.0,52.57,0.000581,Yes,Threshold = median(H); no free parameter.
+Mean - 0.5*std threshold,6.4895,159,41,20.5,82.08,8.8e-05,Yes,"Threshold = mean(H) - 0.5*std(H); fixed multiplier, no dataset-specific tuning."
+Otsu automatic threshold,6.3412,164,36,18.0,84.46,0.000408,Yes,"Otsu automatic bimodal threshold; fully data-driven, no manual parameter."
+Percentile cut (drop lowest 25%),6.605,150,50,25.0,77.72,0.000898,Yes,Drop lowest 25% by entropy; rule fixed but cut-fraction is an a-priori design choice.
+Percentile cut (drop lowest 33%),6.7256,134,66,33.0,69.81,0.00015,Yes,Drop lowest 33% by entropy; rule fixed but cut-fraction is an a-priori design choice.
+Fixed top-K (K=150),6.6057,150,50,25.0,77.72,0.000427,No,Keep top-150 bands; k chosen arbitrarily a priori (not reproducible across datasets).
