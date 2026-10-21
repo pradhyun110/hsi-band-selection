@@ -2,6 +2,10 @@
 
 Software study behind the project **Hardware Acceleration of Spectral Band Selection for Real-time Hyperspectral Image Processing** (course 22EC76, target board Nexys 4 / Artix-7 XC7A100T). This repository holds the Python simulation only; the FPGA/Verilog part is not in here yet.
 
+## One-page version of the code
+`python one_page_demo.py` (81 lines, under a minute) keeps 20 bands in 7 ways (a genetic algorithm that uses labels, and variance, entropy,
+k-means, PCA, greedy R^2 and evenly spaced bands that do not) and prints the exam accuracy of each. Read this file first to understand the idea.
+
 ## Quick demo (start here)
 ```
 pip install -r requirements.txt
@@ -18,6 +22,11 @@ Code: `demo.py` (runs and draws) and `src/unsupervised_selectors.py` (the eight 
 Six random train/test splits, every K from 15 to 20. Supervised search keeps 15 to 20 bands within about 1 point of all 200 bands
 (tuned SVM: 85.4 to 86.6 % against 85.4 % for all 200; about 2 to 3 points below the cleaned 164-band set).
 Label-free methods lose 1.7 to 4.6 points against all 200 bands. Recommended band sets: `results/small_k/recommended_band_sets_original_numbers.json`.
+
+## Beyond accuracy (information, time, size)
+`python src/extra_metrics.py` then `python src/plot_extra.py` (about 2 minutes). Writes `results/extra/extra_metrics.csv` and two pictures:
+`figE1_scorecard_K20.png` (accuracy, per-class accuracy, information kept, repeated information, selection time for every method at 20 bands) and
+`figE2_cost_vs_bands.png` (data per pixel, classifier time, classifier size for 15, 20, 30, 164 and 200 bands). Timings are from one computer and are only meaningful relative to each other.
 
 ## Headline result
 Keeping **30 of the 200 bands (15%) matches the accuracy of all 200 bands** (about 83% overall accuracy, SVM-RBF, held-out test pixels). Twenty bands lose under 1 point against the raw cube.
