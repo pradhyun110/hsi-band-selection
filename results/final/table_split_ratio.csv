@@ -1,0 +1,6 @@
+Learning share (%),Learning pixels,Exam pixels,Fewest learning pixels in one crop,Fisher-Cholesky OA (%),GA OA (%),All 164 bands OA (%),All 200 bands OA (%),Fisher-Cholesky AA (%),GA AA (%),Fisher-Cholesky accuracy on its own learning pixels (%),GA minus Fisher-Cholesky OA (points),GA selection time (s),Fisher-Cholesky selection time (s)
+10,1026,9223,2,78.6 ± 0.5,79.4 ± 1.0,81.2 ± 0.6,79.1 ± 0.3,68.3 ± 1.6,65.5 ± 3.0,84.5,0.7,8.4,0.007
+20,2051,8198,4,82.1 ± 0.4,83.2 ± 0.4,84.8 ± 0.5,83.4 ± 0.3,75.6 ± 2.4,75.5 ± 2.8,85.4,1.1,10.7,0.009
+40,4098,6151,8,84.8 ± 0.5,84.9 ± 0.6,87.3 ± 0.4,87.0 ± 0.4,83.1 ± 1.6,83.0 ± 1.4,86.8,0.2,15.8,0.015
+50,5126,5123,10,85.5 ± 0.8,85.8 ± 0.5,88.0 ± 0.6,88.0 ± 0.4,84.9 ± 2.2,85.0 ± 1.5,87.2,0.3,19.2,0.021
+80,8198,2051,16,86.9 ± 0.8,86.9 ± 0.5,89.3 ± 0.3,89.8 ± 0.7,88.5 ± 2.0,87.2 ± 1.7,88.1,-0.1,35.3,0.026
