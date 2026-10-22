@@ -1,0 +1,17 @@
+,Alfalfa,Corn-notill,Corn-mintill,Corn,Grass-pasture,Grass-trees,Grass-pasture-mowed,Hay-windrowed,Oats,Soybean-notill,Soybean-mintill,Soybean-clean,Wheat,Woods,Buildings-Grass-Trees-Drives,Stone-Steel-Towers
+Alfalfa,77,0,0,5,4,0,0,135,0,0,0,1,0,0,0,0
+Corn-notill,0,4374,180,122,14,7,0,0,0,356,1630,163,0,0,6,0
+Corn-mintill,0,852,1630,79,0,5,0,0,0,157,1157,103,0,0,1,0
+Corn,0,318,39,658,11,36,0,3,0,6,50,11,0,0,8,0
+Grass-pasture,8,10,8,29,2070,34,9,11,0,15,32,22,0,52,16,0
+Grass-trees,0,0,0,1,16,3418,0,0,0,2,2,1,0,9,55,0
+Grass-pasture-mowed,2,0,0,3,8,0,99,10,0,3,6,1,0,0,0,0
+Hay-windrowed,8,0,0,5,2,0,0,2277,0,0,0,0,0,0,0,0
+Oats,0,0,0,0,2,62,0,0,1,0,0,0,4,0,27,0
+Soybean-notill,0,141,143,7,21,11,8,0,0,2874,1315,147,0,0,1,0
+Soybean-mintill,0,803,215,46,39,15,8,6,0,762,9719,127,0,0,44,0
+Soybean-clean,0,617,127,90,9,8,0,0,0,235,417,1339,0,0,1,1
+Wheat,0,0,0,0,0,6,0,0,0,5,0,0,937,0,36,0
+Woods,0,0,1,1,54,12,0,0,0,0,0,0,1,5901,102,0
+Buildings-Grass-Trees-Drives,0,1,26,9,41,162,0,0,0,24,11,6,107,515,952,0
+Stone-Steel-Towers,0,13,7,0,0,0,0,0,0,7,5,7,0,0,0,405
