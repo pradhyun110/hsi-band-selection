@@ -1,0 +1,29 @@
+digraph G {
+  graph [rankdir=TB, fontname="Inter", fontsize=13, nodesep=0.35, ranksep=0.42, pad=0.3, bgcolor="white",
+         label="Phase 1 (software): methodology", labelloc=t, fontcolor="#1a1a19"];
+  node  [shape=box, style="rounded,filled", fontname="Inter", fontsize=11, color="#8a8985", fillcolor="#f4f4f2", penwidth=1.2, margin="0.18,0.08"];
+  edge  [color="#8a8985", penwidth=1.3, arrowsize=0.8, fontname="Inter", fontsize=9, fontcolor="#5f5e5a"];
+
+  data   [label="Indian Pines hyperspectral image\n145 × 145 pixels × 200 bands\n+ ground truth: 16 crop classes (10,249 labelled pixels)", fillcolor="#e6e6e3"];
+  pre    [label="1. Entropy pre-screening\n256-bin histogram of each band -> Shannon entropy\nOtsu automatic threshold (6.34 bits)", fillcolor="#dcebfb", color="#2a78d6"];
+  keep   [label="164 candidate bands\n(36 noisy / water-absorption bands removed)", fillcolor="#e6e6e3"];
+  split  [label="2. Stratified split, repeated 6 times (seeds 42, 1, 2, 3, 4, 5)\n20 % of each crop's pixels = learning set   |   80 % = exam set", fillcolor="#dcebfb", color="#2a78d6"];
+
+  subgraph cluster_sel {
+    label=""; style="rounded"; color="#8a8985";
+    hdr [label="3. Band selection: keep K bands (K = 5 ... 30), using the learning pixels only", shape=box, style="rounded,filled", fillcolor="#dcebfb", color="#2a78d6"];
+    fc   [label="Fisher-Cholesky (chosen)\ngreedy class separation\n+ recursive Cholesky update", fillcolor="#d3f1e6", color="#1baf7a", penwidth=2.2];
+    meta [label="Search methods\nGA, Hybrid (GA + Fisher shortlist),\nJaya, Grey wolf (GWO)\nLDA fitness, 5 x 3,000 evaluations", fillcolor="#f4f4f2"];
+    base [label="Base paper\nMFE-CFSP\n(re-implemented, label-free)", fillcolor="#f4f4f2"];
+    rank [label="Label-free rankings\nEntropy, Variance", fillcolor="#f4f4f2"];
+  }
+  svm    [label="4. Classification\nSVM (RBF kernel) trained on the learning pixels with the K selected bands\n-> predicts the crop of every exam pixel", fillcolor="#dcebfb", color="#2a78d6"];
+  ev     [label="5. Evaluation (mean ± std over 6 splits)\nOA, AA, kappa, MCC, precision, recall, F1, specificity, confusion matrix\nCEM detection AUC, reconstruction SSIM, selection time, band stability", fillcolor="#dcebfb", color="#2a78d6"];
+  dec    [label="Decision: Fisher-Cholesky with K = 18 bands\n82.1 % OA (all 200 bands: 83.4 %), selected in about 0.01 s\nGA: 83.2 % in about 10 s   |   Base paper: 74.8 %", fillcolor="#d3f1e6", color="#1baf7a", penwidth=2.2];
+  out    [label="Output to Phase 2: the band-selection algorithm and its 18 band numbers\n(91 % less data per pixel)", fillcolor="#e6e6e3"];
+
+  data -> pre -> keep -> split;
+  split -> hdr; hdr -> fc; hdr -> meta; hdr -> base; hdr -> rank;
+  fc -> svm; meta -> svm; base -> svm; rank -> svm;
+  svm -> ev -> dec -> out;
+}

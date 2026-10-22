@@ -1,0 +1,19 @@
+digraph G {
+  graph [rankdir=TB, fontname="Inter", fontsize=13, nodesep=0.3, ranksep=0.38, pad=0.3, bgcolor="white",
+         label="Fisher-Cholesky band selection (chosen algorithm)", labelloc=t, fontcolor="#1a1a19"];
+  node  [shape=box, style="rounded,filled", fontname="Inter", fontsize=11, color="#8a8985", fillcolor="#f4f4f2", penwidth=1.2, margin="0.18,0.08"];
+  edge  [color="#8a8985", penwidth=1.3, arrowsize=0.8, fontname="Inter", fontsize=10, fontcolor="#5f5e5a"];
+  in   [label="Input: learning pixels (164 bands, scaled) with crop labels, number of bands K", fillcolor="#e6e6e3"];
+  st   [label="Class statistics (one pass over the learning pixels)\nclass means m_c, overall mean m, pixel counts n_c\nwithin-class scatter Sw (164 x 164) + small ridge", fillcolor="#dcebfb", color="#2a78d6"];
+  init [label="Start with no bands chosen: S = { },  Cholesky factor L = empty", fillcolor="#f4f4f2"];
+  loop [label="For every band x not yet chosen:\ny = L⁻¹ Sw[S, x]   (forward substitution)\nd² = Sw[x, x] − ‖y‖²\ngain(x) = Σ_c  n_c · ((m_c[x] − m[x]) − y · u_c)² / d²", fillcolor="#d3f1e6", color="#1baf7a", penwidth=2];
+  pick [label="Choose x* = band with the largest gain\n(the band that adds the most class separation)", fillcolor="#d3f1e6", color="#1baf7a", penwidth=2];
+  upd  [label="Add x* to S\nextend L by one row [ yᵀ , d ]   (no re-factorisation)\nupdate u_c for every class", fillcolor="#dcebfb", color="#2a78d6"];
+  q    [label="K bands chosen?", shape=diamond, style="filled", fillcolor="#fdf0d5", color="#eda100", fontsize=11];
+  out  [label="Output: the K band numbers\n(K = 18 recommended)", fillcolor="#e6e6e3"];
+  note [label="Only multiply-add, one square root and one division per step:\ncost per candidate O(k²); whole selection O(n K³), about 0.64 million multiply-adds for K = 18", shape=note, fillcolor="white", color="#c3c2b7", fontsize=9.5];
+  in -> st -> init -> loop -> pick -> upd -> q;
+  q -> loop [label="  no"];
+  q -> out  [label="  yes"];
+  out -> note [style=invis];
+}

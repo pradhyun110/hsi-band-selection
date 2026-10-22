@@ -1,84 +1,119 @@
-# Spectral band selection for Indian Pines: software simulation
+# Spectral band selection for real-time hyperspectral image processing (Indian Pines)
 
-Software study behind the project **Hardware Acceleration of Spectral Band Selection for Real-time Hyperspectral Image Processing** (course 22EC76, target board Nexys 4 / Artix-7 XC7A100T). This repository holds the Python simulation only; the FPGA/Verilog part is not in here yet.
+Software study for the project *Hardware Acceleration of Spectral Band Selection for Real-time Hyperspectral Image Processing* (22EC76, Dayananda Sagar College of Engineering). The goal is to keep **15–20 of the 200 bands** while keeping classification accuracy close to using all bands, with a selection method cheap enough for an FPGA.
 
-## One-page version of the code
-`python one_page_demo.py` (81 lines, under a minute) keeps 20 bands in 7 ways (a genetic algorithm that uses labels, and variance, entropy,
-k-means, PCA, greedy R^2 and evenly spaced bands that do not) and prints the exam accuracy of each. Read this file first to understand the idea.
+**Result:** the chosen method is **Fisher-Cholesky with K = 18 bands**: **82.1 % overall accuracy** (all 200 bands: 83.4 %), selected in about **0.01 s**. Its accuracy at 18 bands equals its accuracy at 20 (both 82.1 %), so 18 is enough: a 91 % cut in data. The genetic algorithm reaches 82.9–83.2 % but needs about 10 s, and the base paper's method (MFE-CFSP) reaches 74.7 %.
 
-## Quick demo (start here)
+## Pipeline
+
+```
+200 bands --> entropy pre-screening (Otsu threshold) --> 164 bands --> band selection (K bands) --> SVM classifier
+```
+
+1. **Pre-screening** (`src/entropy_prescreen.py`). Compute the entropy of every band; the Otsu threshold (6.34 bits, no hand-picked parameter) removes 36 noisy, low-information bands.
+2. **Band selection** (`src/final_comparison.py`). The 8 methods compared are listed below.
+3. **Grading** (`src/metrics.py`). An SVM is trained on 20 % of the labelled pixels (the *learning* pixels) using only the chosen bands. It is then scored on the other 80 % (the *exam* pixels), which no method ever sees while choosing bands.
+
+| Method | Uses labels? | Idea |
+|---|---|---|
+| **Fisher-Cholesky (chosen)** | yes (learning pixels) | Add bands one at a time, each time the band that most increases class separation (Fisher/LDA criterion). A recursive Cholesky update keeps every step cheap. |
+| GA | yes | Genetic algorithm. Its fitness is the accuracy of an LDA classifier on learning pixels. |
+| Hybrid (GA + Fisher shortlist) | yes | The GA searches only the 2K bands that Fisher-Cholesky ranks first. |
+| Jaya, Grey wolf (GWO) | yes | Other metaheuristics with the same fitness and budget as the GA. |
+| Base paper (MFE-CFSP) | no | Our re-implementation of Hao et al., IEEE JSTARS 2026. |
+| Entropy, Variance | no | Keep the K bands with the highest entropy or variance. |
+
+## Results at 20 bands (mean ± std over 6 splits; full tables: `results/final/table_K20.csv`, `table_K18.csv`)
+
+At 18 bands (recommended K), Fisher-Cholesky scores 82.1 % OA, 75.6 % AA and 0.795 kappa; the GA scores 83.2 %, 75.5 % and 0.807.
+
+
+| Method | OA (%) | AA (%) | Kappa | F1 (%) | CEM AUC | Selection time |
+|---|---|---|---|---|---|---|
+| **Fisher-Cholesky (chosen)** | **82.1 ± 0.3** | 75.2 ± 1.5 | 0.794 | 77.5 | 0.940 | **0.011 s** |
+| GA | 82.9 ± 0.8 | 75.4 ± 3.2 | 0.804 | 78.4 | 0.942 | 10.5 s |
+| Hybrid (GA + Fisher shortlist) | 83.2 ± 0.3 | 76.6 ± 1.3 | 0.808 | 79.3 | 0.941 | 10.2 s |
+| Jaya | 82.1 ± 0.8 | 76.4 ± 3.3 | 0.795 | 79.0 | 0.938 | 9.4 s |
+| Grey wolf (GWO) | 82.5 ± 0.7 | 74.9 ± 3.9 | 0.799 | 77.5 | 0.942 | 10.2 s |
+| Base paper (MFE-CFSP) | 74.7 ± 0.4 | 67.8 ± 1.1 | 0.708 | 69.8 | 0.901 | 0.52 s |
+| Entropy | 61.3 ± 5.9 | 45.0 ± 7.4 | 0.545 | 44.8 | 0.897 | 0.018 s |
+| Variance | 62.0 ± 0.6 | 48.2 ± 0.6 | 0.552 | 48.1 | 0.867 | 0.003 s |
+| *All 164 pre-screened bands* | 84.8 | 77.6 | 0.825 | 79.3 | 0.956 | – |
+| *All 200 bands* | 83.4 | 77.2 | 0.810 | 79.8 | 0.955 | – |
+
+**OA** is overall accuracy: the share of exam pixels labelled correctly. **AA** is average accuracy: the accuracy of each crop, averaged, so small crops count equally (it equals the mean sensitivity/recall). **Kappa** is accuracy corrected for chance. **F1** balances precision and recall (mean over crops). **CEM AUC** measures target detection (a base-paper metric). Precision, specificity, MCC and SSIM are in the full table. Selection time is the median over splits; GA, Jaya, GWO and Hybrid include 5 restarts of 3,000 fitness calls each.
+
+## Figures (`results/final/`)
+
+| Figure | Shows |
+|---|---|
+| `fig1_dataset.png` | The image, the 16-crop ground truth, the mean spectrum of each crop |
+| `fig1b_learning_exam_split.png` | What a split is: 20 % of each crop's pixels for learning, 80 % for the exam |
+| `fig2_prescreening.png` | Entropy of each band, threshold rules compared, bands removed |
+| `fig3_prescreening_effect.png` | Fisher-Cholesky with vs without pre-screening |
+| `fig4_classification_metrics.png` | OA, AA, kappa, precision, F1, specificity vs number of bands, all 8 methods |
+| `fig5_detection_reconstruction.png` | CEM target-detection AUC and SSIM vs number of bands |
+| `fig6_time_vs_accuracy_K20.png` | Selection time vs accuracy (why Fisher-Cholesky was chosen) |
+| `fig7_per_class_sensitivity_K20.png` | Sensitivity of every crop |
+| `fig8a_classification_maps_K20.png` | Classification maps, all 8 methods and all 200 bands |
+| `fig8b_error_maps_K20.png` | The exam pixels each method gets wrong (red) |
+| `fig9_selected_bands_K20.png` | Which bands each method keeps |
+| `fig10_base_paper_ablation_K20.png` | The base paper's modules added one at a time, on our data |
+| `fig11_confusion_matrices_K20.png` | Confusion matrices (which crops are mistaken for which) |
+| `fig12_band_stability_K20.png` | How similar the chosen bands are from split to split (exactly, and within 2 bands) |
+| `fig13_cholesky_criteria.png` | Why Fisher: other criteria on the same recursive-Cholesky engine |
+| `fig14_spread_rules.png` | Forcing the bands to spread out costs accuracy; a 3-band minimum gap is free |
+
+## How to run (from this folder)
+
 ```
 pip install -r requirements.txt
-python demo.py            # about 2-3 minutes;  python demo.py --quick  for about 1 minute
+python one_page_demo.py                 # 1 minute: the whole idea in one short file
+python src/entropy_prescreen.py         # pre-screening -> results/prescreen/
+python src/final_comparison.py          # about 20 min: all methods, 6 splits -> results/final/
+python src/final_comparison.py --regrade   # adds MCC and confusion matrices (2 min)
+python src/plot_dataset.py              # fig1
+python src/plot_prescreen.py            # fig2
+python src/final_comparison.py --maps      # maps for every method (1 min)
+python src/compare_cholesky_criteria.py # Fisher vs other criteria on the Cholesky engine (3 min)
+python src/spread_rules.py              # forcing spread across the spectrum (3 min)
+python src/plot_final.py                # fig1b, fig3 - fig13 and the tables
 ```
-Then open `results/demo/report.html` in a browser. It compares one supervised method (GA with labels)
-against eight unsupervised methods (variance, entropy, k-means, Ward clustering, PCA loadings, greedy R²,
-successive projections, density peaks) with bar chart, accuracy-vs-bands curves, land-cover maps and chosen bands.
-The same pictures are in `results/demo/fig1..fig4*.png`; the numbers are in `results/demo/*.csv`.
-Code: `demo.py` (runs and draws) and `src/unsupervised_selectors.py` (the eight label-free methods, about 120 lines).
-
-## 15 to 20 bands (second study)
-`python src/small_k.py` (about 16 min) then `python src/analyze_small_k.py`; open `results/small_k/report_15_20.html`.
-Six random train/test splits, every K from 15 to 20. Supervised search keeps 15 to 20 bands within about 1 point of all 200 bands
-(tuned SVM: 85.4 to 86.6 % against 85.4 % for all 200; about 2 to 3 points below the cleaned 164-band set).
-Label-free methods lose 1.7 to 4.6 points against all 200 bands. Recommended band sets: `results/small_k/recommended_band_sets_original_numbers.json`.
-
-## Beyond accuracy (information, time, size)
-`python src/extra_metrics.py` then `python src/plot_extra.py` (about 2 minutes). Writes `results/extra/extra_metrics.csv` and two pictures:
-`figE1_scorecard_K20.png` (accuracy, per-class accuracy, information kept, repeated information, selection time for every method at 20 bands) and
-`figE2_cost_vs_bands.png` (data per pixel, classifier time, classifier size for 15, 20, 30, 164 and 200 bands). Timings are from one computer and are only meaningful relative to each other.
-
-## Headline result
-Keeping **30 of the 200 bands (15%) matches the accuracy of all 200 bands** (about 83% overall accuracy, SVM-RBF, held-out test pixels). Twenty bands lose under 1 point against the raw cube.
-
-| Bands kept | Supervised wrapper (mean of 90 runs) | Label-free search (U1, reconstruction R²) | Uniform spacing | Random subsets |
-|---|---|---|---|---|
-| 10 | 0.789 | 0.764 | 0.768 | 0.740 |
-| 20 | 0.821 | 0.782 | 0.795 | 0.791 |
-| 30 | 0.831 | 0.796 | 0.823 | 0.804 |
-| 40 | 0.835 | 0.805 | 0.818 | 0.810 |
-
-All 164 pre-screened bands: 0.841. All 200 raw bands: 0.830.
-
-- The six search algorithms (GA, SA, DE, GWO, PSO, Jaya) are close to a statistical tie; the differences are mostly under 0.5 points at 20+ bands.
-- Greedy forward selection (about 4 s) matches them at 15 to 25 bands.
-- Two label-free search objectives did worse than the supervised wrapper by 2.5 to 7 points, and no better than uniform spacing.
-- SVM-RBF is the most accurate classifier at small band counts; the linear models lose 8 to 9 points at 20 to 30 bands.
-- The three label-free selectors from github.com/Zrahay/HyperSpectral_Image (variance, k-means, PCA loadings) score 0.63 to 0.69 at 30 bands on the raw cube. After our pre-screening k-means and PCA reach 0.79 and 0.77; top-variance stays at 0.66.
-
-## Protocol (no leakage)
-- 10,249 labelled pixels, 200 bands, 16 classes. Entropy + Otsu pre-screening keeps 164 candidate bands.
-- Split: stratified 20% train / 80% test, seed 42.
-- Search/fitness uses **train pixels only** (train cut into two halves, fitness = mean validation accuracy of a regularised LDA, both directions). Test pixels are used once, to score the final subset.
-- Fixed band count K in {5, 10, 15, 20, 25, 30, 40, 50, 60}; every algorithm returns exactly K bands. Budget 3,000 fitness calls, population 30, 15 seeds per setting.
-- Final scoring with SVM-RBF, KNN(5), LDA, Logistic Regression and Random Forest.
 
 ## Layout
-- `data/` Indian Pines cube and ground truth (unmodified).
-- `src/` current pipeline.
-- `legacy_v1/` earlier experiments, **superseded** (fitness scored on test pixels, weak nearest-centroid fitness, free band count of about 80). Kept for the record; do not cite their rankings.
-- `results/` tables, figures and raw search outputs (`results/sim/`).
 
-## Run order (from the repository root)
 ```
-pip install -r requirements.txt
-python src/entropy_prescreen.py          # 200 -> 164 bands (reproducible)
-python src/run_search.py main            # supervised-fitness search sweep (~12 min on 2 cores)
-python src/run_search.py ablation        # nearest-centroid fitness at K=20
-python src/baselines.py
-python src/eval_subsets.py               # ~19 min
-python src/analyze.py                    # tables + figures
-python src/timing_clean.py 30
-python src/run_search_unsup.py           # label-free objectives
-python src/eval_unsup.py
-python src/analyze_unsup.py
-python src/compare_repo.py               # the three selectors from the GitHub repo above
+data/                     the Indian Pines cube (145 x 145 x 200) and its labels -- unchanged originals
+one_page_demo.py          short, readable version of the method
+src/data_setup.py         loading and the stratified 20 % / 80 % split
+src/common.py             LDA fitness used by GA / Jaya / GWO
+src/optimizers.py         GA, Jaya, GWO (and SA, PSO, DE from the earlier study)
+src/fisher_cholesky.py    the chosen method
+src/mfe_cfsp.py           base paper re-implementation
+src/unsupervised_selectors.py   entropy, variance and other label-free rankings
+src/metrics.py            every metric
+src/cholesky_criteria.py  other criteria on the same engine (to justify Fisher)
+src/spread_rules.py       Fisher-Cholesky with spread rules
+docs/                     block diagrams of this phase and the next (FPGA) phase
+src/final_comparison.py, src/plot_final.py, src/plot_dataset.py, src/entropy_prescreen.py, src/plot_prescreen.py
+results/prescreen/        pre-screening outputs (the 164 band numbers)
+results/final/            all final figures, tables, band sets
+archive/                  earlier studies kept for the record (see archive/README.md)
 ```
-Raw search outputs are already in `results/sim/`, so `analyze.py` and `analyze_unsup.py` run without repeating the searches.
+
+## Protocol (no leakage)
+
+- 6 outer splits: stratified 20 % learning / 80 % exam, seeds 42, 1, 2, 3, 4, 5. K = 5, 10, 15, 18, 20, 25, 30.
+- Band selection and every fitness function use learning pixels only. Exam pixels are used once, to grade the final band set.
+- Every metaheuristic gets the same candidate bands, fitness, budget (5 × 3,000 calls) and seeds.
 
 ## Caveats
-- One outer split (seed 42). A random pixel split lets neighbouring pixels from the same field land in both train and test, which lifts every number equally.
-- Hyper-parameters are literature defaults and were not tuned. Classifiers are untuned.
-- The choice of K = 30 and of the consensus band set used test numbers (mild optimism); the pre-declared training-only rule gave K = 40.
-- Only two label-free objectives were tried.
-- FPGA cost figures discussed in the project notes are first-order estimates, not synthesis results.
+
+- **Pixel-level split.** Neighbouring pixels can fall into both the learning and the exam set, which makes every method look better than on a new scene. The comparison between methods is fair; the absolute numbers are optimistic.
+- **Base paper re-implementation.** The paper does not give every setting (gate γ, block size, similarity threshold). Our choices are listed at the top of `src/mfe_cfsp.py`. The paper reports its gains mainly with CNN classifiers on image patches; we use a pixel-wise SVM.
+- **Times are Python on a laptop.** The ratio matters: Fisher-Cholesky does about 20 small matrix-update steps, while the GA does 15,000 classifier evaluations.
+- **Fisher-Cholesky is supervised.** It needs labelled learning pixels. For given data it is deterministic. Across splits only 38 % of the bands are exactly the same, but 90 % are the same or a neighbour within 2 bands (`fig12`). It keeps choosing the same spectral regions, and neighbouring bands carry nearly the same information.
+- **Spread across the spectrum:** Fisher-Cholesky uses all five 40-band regions on every split, but takes about half its bands from bands 0–39, where the crop spectra differ most. Forcing a more even spread lowers accuracy by up to 0.8 points OA. A rule of no two bands closer than 3 costs nothing (`fig14`).
+- **Why Fisher and not another criterion:** on the same Cholesky engine, Fisher beats mean pairwise class distance, worst-pair distance and label-free maximum volume (`fig13`).
+- **Errors sit in the same fields for every method, including all 200 bands** (`fig8b`): mainly the corn and soybean fields and the buildings class. That is a limit of pixel-by-pixel classification on this image, not of band selection.
+- **Pre-screening** barely changes Fisher-Cholesky's accuracy (`fig3`). Its main value is fewer bands to read and process.

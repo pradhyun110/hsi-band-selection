@@ -1,0 +1,35 @@
+digraph G {
+  graph [rankdir=TB, fontname="Inter", fontsize=13, nodesep=0.35, ranksep=0.45, pad=0.3, bgcolor="white", newrank=true,
+         label="Phase 2 (planned): FPGA architecture on the Nexys 4 board (Artix-7 XC7A100T, 100 MHz)", labelloc=t, fontcolor="#1a1a19"];
+  node  [shape=box, style="rounded,filled", fontname="Inter", fontsize=10.5, color="#8a8985", fillcolor="#f4f4f2", penwidth=1.2, margin="0.14,0.07"];
+  edge  [color="#8a8985", penwidth=1.3, arrowsize=0.8, fontname="Inter", fontsize=9, fontcolor="#5f5e5a"];
+
+  prep [label="Host PC (Python): learning pixels -> 16-bit fixed point + crop labels", fillcolor="#e6e6e3"];
+  subgraph cluster_fpga { label="FPGA (Verilog RTL)"; labelloc=b; fontname="Inter"; fontsize=11; style="rounded"; color="#2a78d6"; fontcolor="#1a1a19";
+    rx   [label="UART receiver\n+ input FIFO", fillcolor="#dcebfb", color="#2a78d6"];
+    acc  [label="Statistics accumulator\nclass sums (16 × 164), Σ x xᵀ (164 × 164)\nDSP multiply-add array\n(streams pixels, stores none)", fillcolor="#dcebfb", color="#2a78d6"];
+    fin  [label="Scatter finaliser\nSw = Σ x xᵀ − Σ n_c m_c m_cᵀ + ridge", fillcolor="#dcebfb", color="#2a78d6"];
+    fsm  [label="Control FSM\n+ cycle counter", fillcolor="#f4f4f2"];
+    subgraph cluster_core { label="Fisher-Cholesky core (one band per round, K rounds)"; labelloc=b; fontname="Inter"; fontsize=10.5; style="rounded,filled"; fillcolor="#eefaf5"; color="#1baf7a";
+      fs  [label="Forward substitution\n(MAC unit)", fillcolor="#d3f1e6", color="#1baf7a"];
+      gn  [label="Gain unit\n(16 class terms)", fillcolor="#d3f1e6", color="#1baf7a"];
+      am  [label="Argmax\ncomparator", fillcolor="#d3f1e6", color="#1baf7a"];
+      up  [label="L-factor update\nsquare root + reciprocal (CORDIC / Newton)\nL and u_c in block RAM", fillcolor="#d3f1e6", color="#1baf7a"];
+    }
+    reg  [label="Selected-band register\n(K = 18 band numbers)", fillcolor="#dcebfb", color="#2a78d6"];
+    tx   [label="UART transmitter\nLEDs / 7-segment display", fillcolor="#dcebfb", color="#2a78d6"];
+    ext  [label="Band extraction unit\npixel stream: 200 -> 18 bands (91 % less data)", fillcolor="#fdf0d5", color="#eda100"];
+  }
+  cmp [label="Host PC (Python): same bands as the software golden model?  latency from the cycle count", fillcolor="#e6e6e3"];
+
+  prep -> rx [label=" USB-UART"];
+  rx -> acc -> fin;
+  fin -> fs; fs -> gn -> am -> up;
+  up -> fs [style=dashed, xlabel="next round", constraint=false];
+  am -> reg;
+  reg -> tx; reg -> ext [style=dashed];
+  tx -> cmp [label=" band numbers, cycle count"];
+  {rank=same; rx; acc; fin; fsm}
+  {rank=same; fs; gn; am; up}
+  {rank=same; reg; tx; ext}
+}
