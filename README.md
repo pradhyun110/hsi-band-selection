@@ -2,7 +2,9 @@
 
 Software study for the project *Hardware Acceleration of Spectral Band Selection for Real-time Hyperspectral Image Processing* (22EC76, Dayananda Sagar College of Engineering). The goal is to keep **15–20 of the 200 bands** while keeping classification accuracy close to using all bands, with a selection method cheap enough for an FPGA.
 
-**Result:** the chosen method is **Fisher-Cholesky with K = 18 bands**: **82.1 % overall accuracy** (all 200 bands: 83.4 %), selected in about **0.01 s**. Its accuracy at 18 bands equals its accuracy at 20 (both 82.1 %), so 18 is enough: a 91 % cut in data. The genetic algorithm reaches 82.9–83.2 % but needs about 10 s, and the base paper's method (MFE-CFSP) reaches 74.7 %.
+**Result:** the chosen method is **Fisher-Cholesky with K = 18 bands**: **82.1 % overall accuracy** (all 200 bands: 83.4 %), selected in about **0.01 s**. The genetic algorithm reaches 82.9–83.2 % but needs about 10 s, and the base paper's method (MFE-CFSP) reaches 74.7 %.
+
+**Why 15–20 bands:** accuracy rises steeply up to about 15 bands and then only slowly (`fig17`). It is a bend in the curve, not a flat line: Fisher-Cholesky gains 2.7 more points going from 20 to 100 bands (82.1 % to 84.7 %; all 164 pre-screened bands score 84.8 %). At 18 bands it keeps 97 % of the plateau accuracy (mean of 60, 80, 100 bands) with 11 % of the 164 candidate bands. It is within 3 points of the plateau from 15 bands, within 2 from 30 and within 1 from 50 (`results/final/table_flatline.csv`). The 15–20 choice is a trade-off between data volume and accuracy, not a point where nothing more can be gained.
 
 ## Pipeline
 
@@ -63,6 +65,10 @@ At 18 bands (recommended K), Fisher-Cholesky scores 82.1 % OA, 75.6 % AA and 0.7
 | `fig12_band_stability_K20.png` | How similar the chosen bands are from split to split (exactly, and within 2 bands) |
 | `fig13_cholesky_criteria.png` | Why Fisher: other criteria on the same recursive-Cholesky engine |
 | `fig14_spread_rules.png` | Forcing the bands to spread out costs accuracy; a 3-band minimum gap is free |
+| `fig15_learning_set_size.png` | Accuracy with 10, 20, 40, 50 and 80 % of the pixels used for learning (18 bands) |
+| `fig16_prescreening_all_methods.png` | Every method choosing 18 bands from the 164 pre-screened bands vs from all 200 |
+| `fig18_split_comparison.png` | Fisher-Cholesky, GA, Hybrid, base paper and Entropy at 18 bands for 20/80, 40/60, 50/50, 60/40 and 80/20 splits |
+| `fig17_flatline_overall_accuracy.png` | Overall accuracy out to 100 bands: where the curve bends (`fig4` and `fig5` also run to 100 bands) |
 
 ## How to run (from this folder)
 
@@ -77,7 +83,10 @@ python src/plot_prescreen.py            # fig2
 python src/final_comparison.py --maps      # maps for every method (1 min)
 python src/compare_cholesky_criteria.py # Fisher vs other criteria on the Cholesky engine (3 min)
 python src/spread_rules.py              # forcing spread across the spectrum (3 min)
+python src/extra_studies.py --split --prescreen --extra-k   # about 40 min: learning-set size, 200 vs 164 bands, K = 40 ... 100
 python src/plot_final.py                # fig1b, fig3 - fig13 and the tables
+python src/split_comparison.py          # about 10 min: five methods at five learning/exam splits (needs split_ratio.csv)
+python src/plot_extra.py                # fig15 - fig18 and their tables
 ```
 
 ## Layout
@@ -94,6 +103,9 @@ src/unsupervised_selectors.py   entropy, variance and other label-free rankings
 src/metrics.py            every metric
 src/cholesky_criteria.py  other criteria on the same engine (to justify Fisher)
 src/spread_rules.py       Fisher-Cholesky with spread rules
+src/extra_studies.py      learning-set size, pre-screening on/off for all methods, more bands (K up to 100)
+src/split_comparison.py   five methods at five learning/exam splits
+src/plot_extra.py         figures and tables for those studies
 docs/                     block diagrams of this phase and the next (FPGA) phase
 src/final_comparison.py, src/plot_final.py, src/plot_dataset.py, src/entropy_prescreen.py, src/plot_prescreen.py
 results/prescreen/        pre-screening outputs (the 164 band numbers)
@@ -116,4 +128,6 @@ archive/                  earlier studies kept for the record (see archive/READM
 - **Spread across the spectrum:** Fisher-Cholesky uses all five 40-band regions on every split, but takes about half its bands from bands 0–39, where the crop spectra differ most. Forcing a more even spread lowers accuracy by up to 0.8 points OA. A rule of no two bands closer than 3 costs nothing (`fig14`).
 - **Why Fisher and not another criterion:** on the same Cholesky engine, Fisher beats mean pairwise class distance, worst-pair distance and label-free maximum volume (`fig13`).
 - **Errors sit in the same fields for every method, including all 200 bands** (`fig8b`): mainly the corn and soybean fields and the buildings class. That is a limit of pixel-by-pixel classification on this image, not of band selection.
-- **Pre-screening** barely changes Fisher-Cholesky's accuracy (`fig3`). Its main value is fewer bands to read and process.
+- **Pre-screening** barely changes any method's accuracy: choosing 18 bands from all 200 instead of the 164 pre-screened bands changes overall accuracy by less than 0.7 points for every method, in both directions (`fig3`, `fig16`). An SVM on all 164 bands scores 84.8 % against 83.4 % on all 200, so the 36 removed bands (0-5, 79-98, 102-104, 143-145, 195, 197-199) are mostly noise. Its main value is 18 % fewer bands to read and a covariance matrix a third smaller for the FPGA.
+- **Learning-set size** (`fig15`, 18 bands): more learning pixels raise every method's accuracy (Fisher-Cholesky: 78.6 % at 10 %, 82.1 % at 20 %, 86.9 % at 80 %). The method ranking holds; the GA's lead over Fisher-Cholesky is 1.1 points at 20 %, 0.2 at 40 % and none at 80 %. 20 % is our main protocol because labelled pixels are scarce in practice. The study was run at 18 bands only. At 80 % the exam holds only 2,051 pixels, so per-class scores are noisy, and the neighbour-leakage optimism grows with the learning share.
+- **More than 30 bands:** selection time grows with K but the gap stays: median 0.011 s (K = 18) to 0.043 s (K = 100) for Fisher-Cholesky, and 11 s to 26 s for the GA. Accuracy for K = 40-100 comes from the same 6 splits, grading and search budget as the main study.
